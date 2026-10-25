@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>АРКТИКА-BIM | Цифровой двойник и паспорт макета</title>
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-dark: #0a0f1d;
+      --card-bg: #11192e;
+      --card-border: #1e2c4a;
+      --accent-blue: #0284c7;
+      --accent-cyan: #06b6d4;
+      --accent-orange: #f97316;
+      --accent-green: #10b981;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    header {
+      height: 52px;
+      background: rgba(17, 25, 46, 0.96);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      z-index: 100;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-orange), #ea580c);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 15px;
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.4);
+    }
+
+    .brand-title {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-secondary {
+      background: #1a253e;
+      color: var(--text-main);
+      border: 1px solid #2e416a;
+    }
+    .btn-secondary:hover {
+      background: #253659;
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, #ea580c, #f97316);
+      color: white;
+      box-shadow: 0 0 12px rgba(249, 115, 22, 0.35);
+    }
+    .btn-accent:hover {
+      background: linear-gradient(135deg, #c2410c, #ea580c);
+    }
+
+    /* Main Workspace Layout */
+    .app-main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1.15fr;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Left Column: 3D Viewport + Bottom Controls */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--card-border);
+      background: #0d1424;
+      overflow: hidden;
+    }
+
+    .viewport-container {
+      flex: 1;
+      position: relative;
+      background: radial-gradient(circle at 50% 35%, #18233a 0%, #080d1a 90%);
+      overflow: hidden;
+    }
+
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .viewport-floating-bar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 10;
+    }
+
+    .chip-btn {
+      background: rgba(17, 25, 46, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-main);
+      padding: 5px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      backdrop-filter: blur(6px);
+      transition: all 0.15s;
+    }
+    .chip-btn:hover {
+      border-color: var(--accent-orange);
+    }
+    .chip-btn.active {
+      background: var(--accent-orange);
+      border-color: #fb923c;
+      color: white;
+    }
+
+    /* Module Shape Bar (Beneath 3D Canvas) */
+    .shape-bar-bottom {
+      background: #11192e;
+      border-top: 1px solid var(--card-border);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .shape-bar-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .shape-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+    }
+
+    .shape-btn {
+      background: #18243d;
+      border: 1px solid #283a60;
+      border-radius: 6px;
+      padding: 7px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .shape-btn:hover {
+      border-color: #45629a;
+      background: #1f3052;
+    }
+    .shape-btn.active {
+      border-color: var(--accent-orange);
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--accent-orange);
+    }
+    .shape-btn i {
+      font-size: 13px;
+    }
+    .shape-btn span {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* Right Column: Photos & Mockup Elements */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      background: var(--card-bg);
+      overflow-y: auto;
+      padding: 14px 16px;
+    }
+
+    .right-column::-webkit-scrollbar {
+      width: 5px;
+    }
+    .right-column::-webkit-scrollbar-thumb {
+      background: #253659;
+      border-radius: 3px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-orange);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      background: #17223b;
+      border: 1px solid #283a60;
+      border-radius: 6px;
+      padding: 7px 10px;
+      color: var(--text-main);
+      font-size: 12px;
+      outline: none;
+    }
+    .form-input:focus, .form-select:focus {
+      border-color: var(--accent-orange);
+    }
+
+    /* Primary Upload Callout */
+    .facade-upload-box {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(2, 132, 199, 0.08));
+      border: 2px dashed #f97316;
+      border-radius: 10px;
+      padding: 30px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 14px;
+    }
+    .facade-upload-box:hover {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(2, 132, 199, 0.15));
+      border-color: #fb923c;
+    }
+    .facade-upload-icon {
+      font-size: 32px;
+      color: var(--accent-orange);
+      margin-bottom: 10px;
+    }
+    .facade-upload-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+    .facade-upload-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Multi-Photo Carousel Strip */
+    .photo-strip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      margin-bottom: 10px;
+      padding-bottom: 4px;
+    }
+    .photo-thumb {
+      width: 66px;
+      height: 48px;
+      border-radius: 6px;
+      border: 2px solid #283a60;
+      object-fit: cover;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: all 0.15s;
+    }
+    .photo-thumb.active {
+      border-color: var(--accent-orange);
+      opacity: 1;
+      transform: scale(1.04);
+      box-shadow: 0 0 10px rgba(249, 115, 22, 0.4);
+    }
+    .photo-add-card {
+      width: 76px;
+      height: 48px;
+      border-radius: 6px;
+      border: 2px dashed #3a5385;
+      background: #17223b;
+      color: #38bdf8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 10px;
+      gap: 2px;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+    .photo-add-card:hover {
+      background: #202f52;
+      border-color: #38bdf8;
+    }
+
+    /* Photo Canvas Container */
+    .photo-stage-card {
+      background: #17223b;
+      border: 1px solid #283a60;
+      border-radius: 8px;
+      padding: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      position: relative;
+    }
+
+    .photo-container {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: crosshair;
+    }
+
+    #mockup-img {
+      max-width: 100%;
+      max-height: 250px;
+      display: block;
+      border-radius: 6px;
+    }
+
+    /* Pins on Photo */
+    .hotspot-pin {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      border: 2px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0,0,0,0.7);
+      transition: transform 0.15s;
+    }
+    .hotspot-pin:hover {
+      transform: translate(-50%, -50%) scale(1.3);
+      z-index: 100;
+    }
+
+    /* System Tag Colors */
+    .sys-arch  { background: #0284c7; }
+    .sys-elec  { background: #eab308; }
+    .sys-heat  { background: #ea580c; }
+    .sys-vent  { background: #06b6d4; }
+    .sys-water { background: #3b82f6; }
+    .sys-sewer { background: #8b5cf6; }
+
+    /* Object Card in List */
+    .object-card {
+      background: #151e36;
+      border: 1px solid #233355;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      transition: all 0.15s;
+    }
+    .object-card:hover {
+      border-color: #3b5080;
+    }
+    .object-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .param-pill {
+      display: inline-block;
+      background: #1c2949;
+      border: 1px solid #2e4375;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 10px;
+      color: #cbd5e1;
+      margin: 2px 4px 2px 0;
+    }
+    .param-pill b {
+      color: #38bdf8;
+    }
+
+    .icon-action-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 11px;
+      transition: background 0.15s;
+    }
+    .icon-action-btn:hover {
+      background: #233355;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-window {
+      background: #11192e;
+      border: 1px solid #334771;
+      border-radius: 12px;
+      width: 860px;
+      max-width: 96vw;
+      max-height: 92vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(249, 115, 22, 0.25);
+    }
+    .modal-header {
+      padding: 12px 18px;
+      border-bottom: 1px solid #233355;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-body {
+      padding: 18px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid #233355;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      background: #0d1424;
+    }
+
+    /* Passport Stamp */
+    .passport-stamp-card {
+      border: 2px solid #2a3c66;
+      border-radius: 8px;
+      background: #152038;
+      padding: 14px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .passport-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 1px solid #283a60;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+
+    .passport-doc-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent-orange);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    .passport-sub-doc {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .passport-photo-card {
+      background: #152038;
+      border: 1px solid #283a60;
+      border-radius: 8px;
+      padding: 8px;
+      width: 250px;
+      flex-shrink: 0;
+    }
+    .passport-photo-img-box {
+      position: relative;
+      width: 100%;
+      height: 140px;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #0d1424;
+    }
+    .passport-photo-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .photo-pin-legend-row {
+      font-size: 10px;
+      padding: 3px 0;
+      border-bottom: 1px dashed #283a60;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .photo-pin-legend-row:last-child {
+      border-bottom: none;
+    }
+
+    /* Specification Table */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-bottom: 14px;
+    }
+    .spec-table th {
+      background: #172442;
+      color: #94a3b8;
+      text-align: left;
+      padding: 7px 8px;
+      border-bottom: 1px solid #283a60;
+      font-size: 10px;
+      text-transform: uppercase;
+    }
+    .spec-table td {
+      padding: 7px 8px;
+      border-bottom: 1px solid #1c2b4d;
+      color: var(--text-main);
+    }
+
+    /* Print styles */
+    @media print {
+      body { background: white !important; color: #111 !important; }
+      body * { visibility: hidden; }
+      .modal-window, .modal-window * { visibility: visible; }
+      .modal-window {
+        position: absolute; left: 0; top: 0; width: 100%; max-width: 100%;
+        background: white !important; color: #111 !important;
+        border: none !important; box-shadow: none !important;
+      }
+      .passport-stamp-card, .passport-photo-card {
+        background: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        color: #111 !important;
+      }
+      .spec-table th { background: #e2e8f0 !important; color: #1e293b !important; }
+      .spec-table td { border-bottom: 1px solid #e2e8f0 !important; color: #1e293b !important; }
+      .param-pill { background: #e2e8f0 !important; color: #1e293b !important; border: 1px solid #cbd5e1 !important; }
+      .param-pill b { color: #0369a1 !important; }
+      .passport-doc-name { color: #ea580c !important; }
+      .modal-header, .modal-footer { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-cube"></i>
+      </div>
+      <div>
+        <div class="brand-title">
+          АРКТИКА-BIM <span style="font-size: 10px; background: rgba(249,115,22,0.2); color: var(--accent-orange); padding: 1px 6px; border-radius: 10px;">Цифровой двойник</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <button class="btn btn-secondary" onclick="openIOModal()">
+        <i class="fa-solid fa-file-code"></i> Сохранить в файл
+      </button>
+      <button class="btn btn-accent" onclick="openPassportModal()">
+        <i class="fa-solid fa-award"></i> Защита: Паспорт макета
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Body -->
+  <div class="app-main">
+
+    <!-- Left Column: 3D + Bottom Shape Selector -->
+    <div class="left-column">
+      <div class="viewport-container">
+        <div class="viewport-floating-bar">
+          <button class="chip-btn active" id="btn-roof" onclick="toggleRoof()">
+            <i class="fa-solid fa-layer-group"></i> Крыша (Вкл)
+          </button>
+          <button class="chip-btn active" id="btn-snow" onclick="toggleSnow()">
+            <i class="fa-solid fa-snowflake"></i> Метель
+          </button>
+          <button class="chip-btn" onclick="resetCamera()">
+            <i class="fa-solid fa-rotate-right"></i> Сброс камеры
+          </button>
+        </div>
+
+        <div id="three-canvas"></div>
+      </div>
+
+      <!-- Module Shape Selector (Under 3D Canvas) -->
+      <div class="shape-bar-bottom">
+        <div class="shape-bar-title">
+          <span><i class="fa-solid fa-cubes"></i> Форма макета:</span>
+          <div style="display: flex; gap: 4px;">
+            <button style="width:16px; height:16px; border-radius:3px; border:none; background:#ea580c; cursor:pointer;" onclick="setPanelColor(0xea580c)" title="Оранжевый"></button>
+            <button style="width:16px; height:16px; border-radius:3px; border:none; background:#0284c7; cursor:pointer;" onclick="setPanelColor(0x0284c7)" title="Синий"></button>
+            <button style="width:16px; height:16px; border-radius:3px; border:none; background:#94a3b8; cursor:pointer;" onclick="setPanelColor(0x94a3b8)" title="Серый"></button>
+            <button style="width:16px; height:16px; border-radius:3px; border:none; background:#cbd5e1; cursor:pointer;" onclick="setPanelColor(0xdce3ed)" title="Белый"></button>
+          </div>
+        </div>
+
+        <div class="shape-picker-grid">
+          <div class="shape-btn active" id="btn-shape-single" onclick="setShape('single')">
+            <i class="fa-solid fa-square"></i>
+            <span>1 Блок</span>
+          </div>
+          <div class="shape-btn" id="btn-shape-inline2" onclick="setShape('inline2')">
+            <i class="fa-solid fa-arrows-left-right"></i>
+            <span>2 в ряд</span>
+          </div>
+          <div class="shape-btn" id="btn-shape-double" onclick="setShape('double')">
+            <i class="fa-solid fa-table-cells-large"></i>
+            <span>Сдвоенный</span>
+          </div>
+          <div class="shape-btn" id="btn-shape-lshape" onclick="setShape('lshape')">
+            <i class="fa-solid fa-turn-up"></i>
+            <span>Углом «Г»</span>
+          </div>
+          <div class="shape-btn" id="btn-shape-stacked2" onclick="setShape('stacked2')">
+            <i class="fa-solid fa-bars"></i>
+            <span>2 Этажа</span>
+          </div>
+          <div class="shape-btn" id="btn-shape-ushape" onclick="setShape('ushape')">
+            <i class="fa-solid fa-square-envelope"></i>
+            <span>П-Форма</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Photos and Objects -->
+    <div class="right-column">
+      <div class="section-title">
+        <i class="fa-solid fa-users"></i> Данные команды
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+        <div>
+          <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 3px;">Команда:</label>
+          <input type="text" class="form-input" id="team-name" value="Полярные Медведи" oninput="saveAuto()">
+        </div>
+        <div>
+          <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 3px;">Назначение модуля:</label>
+          <select class="form-select" id="team-role" onchange="saveAuto()">
+            <option value="🛏 Жилой модуль (Общежитие)">🛏 Жилой модуль (Общежитие)</option>
+            <option value="🍲 Столовая и кухня">🍲 Столовая и кухня</option>
+            <option value="🏢 Штаб и узел связи">🏢 Штаб и узел связи</option>
+            <option value="🔬 Научная лаборатория">🔬 Научная лаборатория</option>
+            <option value="🏥 Медпункт и лазарет">🏥 Медпункт и лазарет</option>
+            <option value="⚡ Энергоблок и генераторная">⚡ Энергоблок и генераторная</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Stage 1: Big Button to Upload Facade -->
+      <div id="facade-upload-container">
+        <div class="facade-upload-box" onclick="document.getElementById('facade-input').click()">
+          <div class="facade-upload-icon"><i class="fa-solid fa-camera-retro"></i></div>
+          <div class="facade-upload-title">Загрузите главный фасад макета</div>
+          <div class="facade-upload-desc">Сфотографируйте макет снаружи и загрузите снимок сюда, чтобы начать привязку объектов</div>
+        </div>
+      </div>
+      <input type="file" id="facade-input" accept="image/*" style="display: none;" onchange="handleFacadeUpload(event)">
+
+      <!-- Stage 2: Photos Carousel & Pin Stage -->
+      <div id="photos-workspace" style="display: none;">
+        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span><i class="fa-solid fa-camera"></i> Ракурсы макета:</span>
+        </div>
+
+        <div class="photo-strip" id="photo-strip"></div>
+        <input type="file" id="detail-input" accept="image/*" style="display: none;" onchange="handleDetailUpload(event)">
+
+        <!-- Active Photo Stage -->
+        <div class="photo-stage-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 700; color: #38bdf8;" id="photo-title-label">Главный фасад</span>
+            <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 10px; color: var(--accent-rose);" onclick="deleteCurrentPhoto()">
+              <i class="fa-solid fa-trash-can"></i> Удалить ракурс
+            </button>
+          </div>
+
+          <div class="photo-container" id="photo-container" onclick="handlePhotoClick(event)">
+            <img id="mockup-img" src="" alt="Макет">
+          </div>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 5px;">
+            Кликните по детали на фото, чтобы привязать объект. Кликните по метке или карандашу, чтобы изменить.
+          </div>
+        </div>
+
+        <!-- Objects on Active Photo -->
+        <div class="section-title">
+          <i class="fa-solid fa-list-check"></i> Отмеченные элементы на этом фото (<span id="pins-count">0</span>)
+        </div>
+        <div id="pins-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Object & Parameter Editor -->
+  <div class="modal-backdrop" id="pin-modal">
+    <div class="modal-window" style="width: 640px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: var(--accent-orange); display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-tag"></i> <span id="pin-modal-title">Добавление элемента макета</span>
+        </div>
+        <button class="btn btn-secondary" style="padding: 2px 6px;" onclick="closeModal('pin-modal')">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px;">Наименование элемента:</label>
+            <input type="text" class="form-input" id="edit-pin-name" placeholder="Например: Стенка тамбура">
+          </div>
+          <div>
+            <label style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 3px;">Инженерная система:</label>
+            <select class="form-select" id="edit-pin-system">
+              <option value="arch">🏛️ Архитектура</option>
+              <option value="elec">⚡ Электроснабжение</option>
+              <option value="heat">🔥 Отопление</option>
+              <option value="vent">💨 Вентиляция</option>
+              <option value="water">💧 Водоснабжение</option>
+              <option value="sewer">🚽 Канализация</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: #38bdf8;">Параметры и характеристики:</span>
+          <button class="btn btn-secondary" style="padding: 3px 8px; font-size: 10px;" onclick="addParamRow()">
+            <i class="fa-solid fa-plus"></i> Добавить строку
+          </button>
+        </div>
+
+        <!-- Helpful chips -->
+        <div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">
+          <span style="font-size: 10px; color: var(--text-muted); align-self: center;">Быстро добавить:</span>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Длина', 'Число', '6000', 'мм')">+ Длина (мм)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Ширина', 'Число', '2400', 'мм')">+ Ширина (мм)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Высота', 'Число', '2600', 'мм')">+ Высота (мм)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Количество', 'Число', '1', 'шт')">+ Количество (шт)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Общая длина', 'Число', '10', 'м')">+ Длина труб/кабелей (м)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Мощность', 'Число', '250', 'Вт')">+ Мощность (Вт)</button>
+          <button class="chip-btn" style="padding: 2px 6px; font-size: 10px;" onclick="insertPreset('Материал', 'Текст', 'Пенокартон', '')">+ Материал</button>
+        </div>
+
+        <!-- Parameter Table Header -->
+        <div style="display: grid; grid-template-columns: 1.2fr 0.9fr 1fr 0.7fr 22px; gap: 6px; padding: 4px 0; font-size: 10px; font-weight: 700; color: var(--text-muted); border-bottom: 1px solid #233355;">
+          <span>Параметр</span>
+          <span>Тип данных</span>
+          <span>Значение</span>
+          <span>Ед. изм.</span>
+          <span></span>
+        </div>
+
+        <!-- Parameter Rows Container -->
+        <div id="param-rows" style="max-height: 180px; overflow-y: auto; padding-top: 6px;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('pin-modal')">Отмена</button>
+        <button class="btn btn-accent" onclick="savePinModal()">
+          <i class="fa-solid fa-check"></i> Сохранить элемент
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Passport & Official Detailed Pitch Report -->
+  <div class="modal-backdrop" id="passport-modal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: var(--accent-orange); display: flex; align-items: center; gap: 8px;">
+          <i class="fa-solid fa-award"></i> ПАСПОРТ МАКЕТА ЭКСПЕДИЦИОННОГО МОДУЛЯ
+        </div>
+        <button class="btn btn-secondary" style="padding: 2px 6px;" onclick="closeModal('passport-modal')">&times;</button>
+      </div>
+
+      <div class="modal-body" id="pass-content">
+        <!-- 1. Engineering Project Stamp -->
+        <div class="passport-stamp-card">
+          <div class="passport-title-row">
+            <div>
+              <div class="passport-doc-name">ПАСПОРТ ЭКСПЕДИЦИОННОГО МОДУЛЯ</div>
+              <div class="passport-sub-doc">Воркшоп «Арктическая база» • Раздел информационного моделирования</div>
+            </div>
+            <div style="text-align: right;">
+              <span style="display: inline-block; padding: 3px 8px; border-radius: 4px; font-weight: 800; font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #34d399;">
+                ПРОЕКТ ГОТОВ К ЗАЩИТЕ
+              </span>
+              <div style="font-size: 10px; color: #94a3b8; margin-top: 3px;" id="pass-date">2026 г.</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr 0.8fr; gap: 12px; font-size: 11px; align-items: center;">
+            <div>
+              <span style="color:#94a3b8; font-size:10px; display:block;">Команда авторов:</span>
+              <b style="font-size:13px; color:#f8fafc;" id="pass-team">Полярные Медведи</b>
+            </div>
+            <div>
+              <span style="color:#94a3b8; font-size:10px; display:block;">Функция модуля:</span>
+              <b style="font-size:13px; color:#38bdf8;" id="pass-role">Жилой модуль</b>
+            </div>
+            <div>
+              <span style="color:#94a3b8; font-size:10px; display:block;">Форма компоновки:</span>
+              <b style="font-size:13px; color:#fb923c;" id="pass-shape-name">1 Модуль (6 × 2.4 м)</b>
+            </div>
+            <div style="text-align: right;">
+              <span style="color:#94a3b8; font-size:10px; display:block;">Элементов BIM:</span>
+              <b style="font-size:14px; color:#34d399;" id="pass-total-pins">0</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Photo Gallery with Markers & Legends -->
+        <div style="margin-bottom: 16px;">
+          <div style="font-size: 11px; font-weight: 700; color: #38bdf8; margin-bottom: 8px;">
+            <i class="fa-solid fa-camera"></i> РАКУРСЫ ФИЗИЧЕСКОГО МАКЕТА С ОТМЕТКАМИ ЦИФРОВОГО ДВОЙНИКА:
+          </div>
+          <div id="pass-gallery-view" style="display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px;"></div>
+        </div>
+
+        <!-- 3. Grouped BIM Specification Table -->
+        <div style="font-size: 11px; font-weight: 700; color: var(--accent-orange); margin-bottom: 6px;">
+          <i class="fa-solid fa-clipboard-list"></i> ВЕДОМОСТЬ ЭЛЕМЕНТОВ ПО ИНЖЕНЕРНЫМ СИСТЕМАМ:
+        </div>
+        <div id="pass-spec-grouped"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> Печать в PDF (А4)
+        </button>
+        <button class="btn btn-accent" onclick="closeModal('passport-modal')">
+          Закрыть
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: JSON IO -->
+  <div class="modal-backdrop" id="io-modal">
+    <div class="modal-window" style="width: 500px;">
+      <div class="modal-header">
+        <div style="font-weight: 700; color: var(--accent-orange);">Сохранить или восстановить проект</div>
+        <button class="btn btn-secondary" style="padding: 2px 6px;" onclick="closeModal('io-modal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <textarea id="io-area" style="width: 100%; height: 160px; background: #080d1a; border: 1px solid #233355; border-radius: 6px; color: #fed7aa; font-family: monospace; font-size: 11px; padding: 8px;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="downloadJSON()">
+          <i class="fa-solid fa-download"></i> Скачать файл .json
+        </button>
+        <button class="btn btn-accent" onclick="loadJSON()">
+          <i class="fa-solid fa-upload"></i> Загрузить
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================
+       STATE & LOCALSTORAGE
+       ======================================================== */
+    const STORAGE_KEY = 'arctic_bim_project_v8';
+
+    const SYSTEM_CONFIG = {
+      arch:  { name: 'Архитектурные решения (АР)', icon: 'fa-landmark', class: 'sys-arch' },
+      elec:  { name: 'Силовое электроснабжение и освещение (ЭОМ)', icon: 'fa-bolt', class: 'sys-elec' },
+      heat:  { name: 'Отопление (ОВ1)', icon: 'fa-fire', class: 'sys-heat' },
+      vent:  { name: 'Вентиляция и кондиционирование (ОВ2)', icon: 'fa-wind', class: 'sys-vent' },
+      water: { name: 'Внутренний водопровод (ВК1)', icon: 'fa-faucet-drip', class: 'sys-water' },
+      sewer: { name: 'Внутренняя канализация (ВК2)', icon: 'fa-toilet', class: 'sys-sewer' }
+    };
+
+    let project = {
+      teamName: 'Полярные Медведи',
+      role: '🛏 Жилой модуль (Общежитие)',
+      shape: 'single', // single, inline2, double, lshape, stacked2, ushape
+      panelColor: 0xea580c,
+      activePhotoIndex: 0,
+      photos: []
+    };
+
+    let pendingPinCoords = null;
+    let editingPinId = null; // null when adding new pin, ID when editing existing pin
+
+    function saveAuto() {
+      project.teamName = document.getElementById('team-name').value;
+      project.role = document.getElementById('team-role').value;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
+      } catch (e) {
+        console.warn('localStorage save warning', e);
+      }
+    }
+
+    function loadSavedState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          project = JSON.parse(saved);
+          document.getElementById('team-name').value = project.teamName || 'Полярные Медведи';
+          document.getElementById('team-role').value = project.role || '🛏 Жилой модуль (Общежитие)';
+        } catch (e) {
+          console.error('Error loading state', e);
+        }
+      }
+    }
+
+    /* ========================================================
+       CLEAN 3D ENGINE
+       ======================================================== */
+    let scene, camera, renderer, controls;
+    let modulesGroup, snowParticles;
+    let showRoof = true;
+    let showSnow = true;
+
+    function init3D() {
+      const container = document.getElementById('three-canvas');
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0a0f1d);
+      scene.fog = new THREE.FogExp2(0x0a0f1d, 0.024);
+
+      camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(13, 9, 15);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.maxPolarAngle = Math.PI / 2 - 0.04;
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0x94a3b8, 0.75));
+      const sun = new THREE.DirectionalLight(0xffedd5, 1.25);
+      sun.position.set(16, 24, 14);
+      sun.castShadow = true;
+      sun.shadow.bias = -0.0005;
+      scene.add(sun);
+
+      const ground = new THREE.Mesh(
+        new THREE.PlaneGeometry(60, 60),
+        new THREE.MeshStandardMaterial({ color: 0xedf2f7, roughness: 0.9 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      const grid = new THREE.GridHelper(30, 30, 0x38bdf8, 0x1e293b);
+      grid.position.y = 0.01;
+      scene.add(grid);
+
+      modulesGroup = new THREE.Group();
+      scene.add(modulesGroup);
+
+      createSnow();
+      rebuild3D();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+
+      animate();
+    }
+
+    function createSnow() {
+      const count = 900;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      for (let i = 0; i < count * 3; i += 3) {
+        pos[i] = (Math.random() - 0.5) * 40;
+        pos[i + 1] = Math.random() * 18;
+        pos[i + 2] = (Math.random() - 0.5) * 40;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      snowParticles = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true }));
+      scene.add(snowParticles);
+    }
+
+    function createModuleUnit(x, y, z, rotY = 0, isUpper = false) {
+      const grp = new THREE.Group();
+      grp.position.set(x, y, z);
+      grp.rotation.y = rotY;
+
+      const L = 6.0; const W = 2.4; const H = 2.6;
+      const stiltH = isUpper ? 0 : 0.7;
+
+      if (!isUpper) {
+        const sGeo = new THREE.CylinderGeometry(0.08, 0.08, stiltH, 8);
+        const sMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
+        [
+          [-L/2 + 0.4, -W/2 + 0.4], [L/2 - 0.4, -W/2 + 0.4],
+          [-L/2 + 0.4, W/2 - 0.4], [L/2 - 0.4, W/2 - 0.4]
+        ].forEach(([sx, sz]) => {
+          const st = new THREE.Mesh(sGeo, sMat);
+          st.position.set(sx, stiltH / 2, sz);
+          st.castShadow = true;
+          grp.add(st);
+        });
+      }
+
+      const oY = stiltH;
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, side: THREE.DoubleSide });
+
+      const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(L, 0.16, W), steelMat);
+      floorMesh.position.set(0, oY + 0.08, 0);
+      floorMesh.receiveShadow = true;
+      grp.add(floorMesh);
+
+      const wallMat = new THREE.MeshStandardMaterial({ color: project.panelColor, roughness: 0.45, side: THREE.DoubleSide });
+      const wallH = H - 0.16;
+      const wallCenterY = oY + 0.16 + wallH / 2;
+
+      // Back Wall
+      const backWall = new THREE.Mesh(new THREE.BoxGeometry(L - 0.24, wallH, 0.06), wallMat);
+      backWall.position.set(0, wallCenterY, -W/2 + 0.05);
+      backWall.castShadow = true;
+      grp.add(backWall);
+
+      // Front Wall with Doorway
+      const doorW = 0.9;
+      const doorH = 2.0;
+      const sideWallL = (L - doorW) / 2 - 0.12;
+
+      const fWall1 = new THREE.Mesh(new THREE.BoxGeometry(sideWallL, wallH, 0.06), wallMat);
+      fWall1.position.set(-L/2 + 0.12 + sideWallL/2, wallCenterY, W/2 - 0.05);
+      fWall1.castShadow = true;
+      grp.add(fWall1);
+
+      const fWall2 = new THREE.Mesh(new THREE.BoxGeometry(sideWallL, wallH, 0.06), wallMat);
+      fWall2.position.set(L/2 - 0.12 - sideWallL/2, wallCenterY, W/2 - 0.05);
+      fWall2.castShadow = true;
+      grp.add(fWall2);
+
+      const lintelH = wallH - doorH;
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(doorW, lintelH, 0.06), wallMat);
+      lintel.position.set(0, oY + 0.16 + doorH + lintelH/2, W/2 - 0.05);
+      grp.add(lintel);
+
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, side: THREE.DoubleSide });
+      const door = new THREE.Mesh(new THREE.BoxGeometry(doorW - 0.02, doorH, 0.05), doorMat);
+      door.position.set(0, oY + 0.16 + doorH/2, W/2 - 0.03);
+      grp.add(door);
+
+      // Cyan light bar above door
+      const lightAccGeo = new THREE.BoxGeometry(0.25, 0.05, 0.06);
+      const lightAccMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x0284c7 });
+      const lightAcc = new THREE.Mesh(lightAccGeo, lightAccMat);
+      lightAcc.position.set(0, oY + 0.16 + doorH + 0.08, W/2 + 0.02);
+      grp.add(lightAcc);
+
+      // Side End Walls
+      const eWall1 = new THREE.Mesh(new THREE.BoxGeometry(0.06, wallH, W - 0.24), wallMat);
+      eWall1.position.set(-L/2 + 0.05, wallCenterY, 0);
+      grp.add(eWall1);
+
+      const eWall2 = new THREE.Mesh(new THREE.BoxGeometry(0.06, wallH, W - 0.24), wallMat);
+      eWall2.position.set(L/2 - 0.05, wallCenterY, 0);
+      grp.add(eWall2);
+
+      // Four Corner Posts
+      const postGeo = new THREE.BoxGeometry(0.14, wallH, 0.14);
+      [
+        [-L/2 + 0.07, -W/2 + 0.07], [L/2 - 0.07, -W/2 + 0.07],
+        [-L/2 + 0.07, W/2 - 0.07], [L/2 - 0.07, W/2 - 0.07]
+      ].forEach(([cx, cz]) => {
+        const post = new THREE.Mesh(postGeo, steelMat);
+        post.position.set(cx, wallCenterY, cz);
+        grp.add(post);
+      });
+
+      // Roof
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.5, side: THREE.DoubleSide });
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(L, 0.14, W), roofMat);
+      roof.position.set(0, oY + H + 0.07, 0);
+      roof.name = "roof";
+      roof.visible = showRoof;
+      roof.castShadow = true;
+      grp.add(roof);
+
+      return grp;
+    }
+
+    function rebuild3D() {
+      while (modulesGroup.children.length > 0) {
+        modulesGroup.remove(modulesGroup.children[0]);
+      }
+
+      const L = 6.0; const W = 2.4; const H = 2.6;
+
+      if (project.shape === 'single') {
+        modulesGroup.add(createModuleUnit(0, 0, 0, 0));
+        controls.target.set(0, 1.5, 0);
+
+      } else if (project.shape === 'inline2') {
+        modulesGroup.add(createModuleUnit(-L/2, 0, 0, 0));
+        modulesGroup.add(createModuleUnit(L/2, 0, 0, 0));
+        controls.target.set(0, 1.5, 0);
+
+      } else if (project.shape === 'double') {
+        modulesGroup.add(createModuleUnit(0, 0, -W/2, 0));
+        modulesGroup.add(createModuleUnit(0, 0, W/2, 0));
+        controls.target.set(0, 1.5, 0);
+
+      } else if (project.shape === 'lshape') {
+        modulesGroup.add(createModuleUnit(0, 0, -W/2, 0));
+        modulesGroup.add(createModuleUnit(L/2 - W/2, 0, L/2 - W/2, -Math.PI / 2));
+        controls.target.set(0, 1.5, 0);
+
+      } else if (project.shape === 'stacked2') {
+        modulesGroup.add(createModuleUnit(0, 0, 0, 0, false));
+        modulesGroup.add(createModuleUnit(0, H + 0.7, 0, 0, true));
+        controls.target.set(0, 3.0, 0);
+
+      } else if (project.shape === 'ushape') {
+        modulesGroup.add(createModuleUnit(0, 0, -W/2, 0));
+        modulesGroup.add(createModuleUnit(-L/2 + W/2, 0, L/2 - W/2, -Math.PI / 2));
+        modulesGroup.add(createModuleUnit(L/2 - W/2, 0, L/2 - W/2, Math.PI / 2));
+        controls.target.set(0, 1.5, 1.0);
+      }
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      if (showSnow && snowParticles) {
+        const pos = snowParticles.geometry.attributes.position.array;
+        for (let i = 1; i < pos.length; i += 3) {
+          pos[i] -= 0.07;
+          pos[i - 1] += 0.03;
+          if (pos[i] < 0) pos[i] = 18;
+          if (pos[i - 1] > 20) pos[i - 1] = -20;
+        }
+        snowParticles.geometry.attributes.position.needsUpdate = true;
+      }
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    function toggleRoof() {
+      showRoof = !showRoof;
+      document.getElementById('btn-roof').classList.toggle('active', showRoof);
+      document.getElementById('btn-roof').innerHTML = showRoof ? '<i class="fa-solid fa-layer-group"></i> Крыша (Вкл)' : '<i class="fa-solid fa-layer-group"></i> Крыша (Снята)';
+      modulesGroup.traverse(c => {
+        if (c.name === "roof") c.visible = showRoof;
+      });
+    }
+
+    function toggleSnow() {
+      showSnow = !showSnow;
+      document.getElementById('btn-snow').classList.toggle('active', showSnow);
+      snowParticles.visible = showSnow;
+    }
+
+    function resetCamera() {
+      camera.position.set(13, 9, 15);
+      controls.target.set(0, 1.5, 0);
+      controls.update();
+    }
+
+    function setShape(shapeType) {
+      project.shape = shapeType;
+      document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+      const activeBtn = document.getElementById(`btn-shape-${shapeType}`);
+      if (activeBtn) activeBtn.classList.add('active');
+      rebuild3D();
+      saveAuto();
+    }
+
+    function setPanelColor(colorHex) {
+      project.panelColor = colorHex;
+      rebuild3D();
+      saveAuto();
+    }
+
+    /* ========================================================
+       STAGE 1 & 2 PHOTO UPLOAD FLOW
+       ======================================================== */
+    function updatePhotoUI() {
+      const facadeBox = document.getElementById('facade-upload-container');
+      const workspace = document.getElementById('photos-workspace');
+
+      if (!project.photos || project.photos.length === 0) {
+        facadeBox.style.display = 'block';
+        workspace.style.display = 'none';
+      } else {
+        facadeBox.style.display = 'none';
+        workspace.style.display = 'block';
+        renderPhotoStrip();
+      }
+    }
+
+    function handleFacadeUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      compressImageFile(file, (dataUrl) => {
+        project.photos = [
+          {
+            id: 'ph_facade',
+            title: '1. Главный фасад',
+            dataUrl: dataUrl,
+            pins: []
+          }
+        ];
+        project.activePhotoIndex = 0;
+        updatePhotoUI();
+        saveAuto();
+      });
+      e.target.value = '';
+    }
+
+    function handleDetailUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      compressImageFile(file, (dataUrl) => {
+        const num = project.photos.length + 1;
+        const newPhoto = {
+          id: 'ph_' + Date.now(),
+          title: `${num}. Ракурс (интерьер / узлы)`,
+          dataUrl: dataUrl,
+          pins: []
+        };
+        project.photos.push(newPhoto);
+        project.activePhotoIndex = project.photos.length - 1;
+        renderPhotoStrip();
+        saveAuto();
+      });
+      e.target.value = '';
+    }
+
+    function compressImageFile(file, callback) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const img = new Image();
+        img.onload = function() {
+          const maxDim = 1000;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const cvs = document.createElement('canvas');
+          cvs.width = w;
+          cvs.height = h;
+          const ctx = cvs.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          callback(cvs.toDataURL('image/jpeg', 0.82));
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderPhotoStrip() {
+      const strip = document.getElementById('photo-strip');
+      strip.innerHTML = '';
+
+      project.photos.forEach((ph, idx) => {
+        const thumb = document.createElement('img');
+        thumb.className = `photo-thumb ${idx === project.activePhotoIndex ? 'active' : ''}`;
+        thumb.src = ph.dataUrl;
+        thumb.title = ph.title;
+        thumb.onclick = () => {
+          project.activePhotoIndex = idx;
+          renderPhotoStrip();
+        };
+        strip.appendChild(thumb);
+      });
+
+      const addBtn = document.createElement('div');
+      addBtn.className = 'photo-add-card';
+      addBtn.innerHTML = '<i class="fa-solid fa-plus"></i><span>+ Ракурс</span>';
+      addBtn.title = 'Добавить фото интерьера или деталей для меток';
+      addBtn.onclick = () => document.getElementById('detail-input').click();
+      strip.appendChild(addBtn);
+
+      updateActivePhotoDisplay();
+    }
+
+    function updateActivePhotoDisplay() {
+      const curPhoto = project.photos[project.activePhotoIndex];
+      if (!curPhoto) return;
+
+      document.getElementById('photo-title-label').innerText = `${curPhoto.title} (${curPhoto.pins.length} отметок)`;
+      document.getElementById('mockup-img').src = curPhoto.dataUrl;
+      renderPinsOnActivePhoto();
+    }
+
+    function deleteCurrentPhoto() {
+      if (project.photos.length <= 1) {
+        if (confirm('Удалить главный фасад? Вам потребуется загрузить новый снимок.')) {
+          project.photos = [];
+          updatePhotoUI();
+          saveAuto();
+        }
+        return;
+      }
+      if (confirm('Удалить этот ракурс и все его отметки?')) {
+        project.photos.splice(project.activePhotoIndex, 1);
+        project.activePhotoIndex = Math.max(0, project.activePhotoIndex - 1);
+        renderPhotoStrip();
+        saveAuto();
+      }
+    }
+
+    /* ========================================================
+       PINS & PARAMETERS (With Edit Support)
+       ======================================================== */
+    function handlePhotoClick(e) {
+      // If clicking directly on a pin, handlePinClick will fire; don't trigger new pin creation
+      if (e.target.classList.contains('hotspot-pin')) return;
+
+      const curPhoto = project.photos[project.activePhotoIndex];
+      if (!curPhoto) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+      const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+
+      pendingPinCoords = { x: xPct.toFixed(1), y: yPct.toFixed(1) };
+      editingPinId = null; // New pin mode
+
+      document.getElementById('pin-modal-title').innerText = 'Добавление элемента макета';
+      document.getElementById('edit-pin-name').value = '';
+      document.getElementById('edit-pin-system').value = 'arch';
+      document.getElementById('param-rows').innerHTML = '';
+
+      // Default parameter: "Длина", Число, 6000, мм
+      addParamRow('Длина', 'Число', '6000', 'мм');
+
+      document.getElementById('pin-modal').classList.add('show');
+    }
+
+    function openEditPin(pinId) {
+      const curPhoto = project.photos[project.activePhotoIndex];
+      if (!curPhoto) return;
+
+      const pin = curPhoto.pins.find(p => p.id === pinId);
+      if (!pin) return;
+
+      editingPinId = pin.id;
+      document.getElementById('pin-modal-title').innerText = 'Редактирование элемента';
+      document.getElementById('edit-pin-name').value = pin.name;
+      document.getElementById('edit-pin-system').value = pin.system;
+      document.getElementById('param-rows').innerHTML = '';
+
+      if (pin.params && pin.params.length > 0) {
+        pin.params.forEach(pr => {
+          addParamRow(pr.name, pr.type, pr.value, pr.unit || '');
+        });
+      } else {
+        addParamRow('Длина', 'Число', '6000', 'мм');
+      }
+
+      document.getElementById('pin-modal').classList.add('show');
+    }
+
+    function addParamRow(name = '', type = 'Текст', val = '', unit = '') {
+      const container = document.getElementById('param-rows');
+      const row = document.createElement('div');
+      row.style = 'display: grid; grid-template-columns: 1.2fr 0.9fr 1fr 0.7fr 22px; gap: 6px; margin-bottom: 6px; align-items: center;';
+      row.innerHTML = `
+        <input type="text" class="form-input" placeholder="Параметр" value="${name}">
+        <select class="form-select">
+          <option value="Текст" ${type==='Текст'?'selected':''}>Текст</option>
+          <option value="Число" ${type==='Число'?'selected':''}>Число</option>
+          <option value="Да/Нет" ${type==='Да/Нет'?'selected':''}>Да/Нет</option>
+        </select>
+        <input type="text" class="form-input" placeholder="Значение" value="${val}">
+        <input type="text" class="form-input" placeholder="Ед. изм." value="${unit}">
+        <button style="background:none; border:none; color:var(--accent-rose); cursor:pointer;" onclick="this.parentElement.remove()">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      `;
+      container.appendChild(row);
+    }
+
+    function insertPreset(name, type, val, unit) {
+      addParamRow(name, type, val, unit);
+    }
+
+    function savePinModal() {
+      const name = document.getElementById('edit-pin-name').value.trim();
+      if (!name) {
+        alert('Введите наименование элемента!');
+        return;
+      }
+      const system = document.getElementById('edit-pin-system').value;
+
+      const params = [];
+      const rows = document.getElementById('param-rows').children;
+      for (let r of rows) {
+        const inputs = r.querySelectorAll('input');
+        const sel = r.querySelector('select');
+        const pName = inputs[0].value.trim();
+        const pType = sel.value;
+        const pVal = inputs[1].value.trim();
+        const pUnit = inputs[2].value.trim();
+        if (pName) {
+          params.push({ name: pName, type: pType, value: pVal, unit: pUnit });
+        }
+      }
+
+      const curPhoto = project.photos[project.activePhotoIndex];
+
+      if (editingPinId !== null) {
+        // Editing existing pin
+        const targetPin = curPhoto.pins.find(p => p.id === editingPinId);
+        if (targetPin) {
+          targetPin.name = name;
+          targetPin.system = system;
+          targetPin.params = params;
+        }
+      } else {
+        // Creating new pin
+        curPhoto.pins.push({
+          id: Date.now(),
+          x: pendingPinCoords.x,
+          y: pendingPinCoords.y,
+          name: name,
+          system: system,
+          params: params
+        });
+      }
+
+      editingPinId = null;
+      closeModal('pin-modal');
+      renderPinsOnActivePhoto();
+      saveAuto();
+    }
+
+    function renderPinsOnActivePhoto() {
+      const container = document.getElementById('photo-container');
+      container.querySelectorAll('.hotspot-pin').forEach(p => p.remove());
+
+      const curPhoto = project.photos[project.activePhotoIndex];
+      if (!curPhoto) return;
+
+      curPhoto.pins.forEach((pin, idx) => {
+        const sysConf = SYSTEM_CONFIG[pin.system] || SYSTEM_CONFIG.arch;
+        const pEl = document.createElement('div');
+        pEl.className = `hotspot-pin ${sysConf.class}`;
+        pEl.style.left = `${pin.x}%`;
+        pEl.style.top = `${pin.y}%`;
+        pEl.innerText = idx + 1;
+        pEl.title = `${pin.name} (Кликните для редактирования)`;
+        pEl.onclick = (ev) => {
+          ev.stopPropagation();
+          openEditPin(pin.id);
+        };
+        container.appendChild(pEl);
+      });
+
+      const listEl = document.getElementById('pins-list');
+      listEl.innerHTML = '';
+      curPhoto.pins.forEach((pin, idx) => {
+        const sysConf = SYSTEM_CONFIG[pin.system] || SYSTEM_CONFIG.arch;
+        const card = document.createElement('div');
+        card.className = 'object-card';
+        card.innerHTML = `
+          <div class="object-card-header">
+            <div style="font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="openEditPin(${pin.id})">
+              <span class="${sysConf.class}" style="color:white; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">${idx+1}</span>
+              ${pin.name}
+            </div>
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-size: 9px; padding: 2px 6px; border-radius: 4px; color: white;" class="${sysConf.class}">${sysConf.name}</span>
+              <button class="icon-action-btn" style="color: #38bdf8;" onclick="openEditPin(${pin.id})" title="Редактировать">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+              <button class="icon-action-btn" style="color: var(--accent-rose);" onclick="deletePin(${pin.id})" title="Удалить">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+          <div style="margin-top: 5px; cursor: pointer;" onclick="openEditPin(${pin.id})">
+            ${pin.params.map(pr => `<span class="param-pill">${pr.name}: <b>${pr.value}${pr.unit ? ' ' + pr.unit : ''}</b></span>`).join('')}
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+
+      document.getElementById('pins-count').innerText = curPhoto.pins.length;
+    }
+
+    function deletePin(pinId) {
+      const curPhoto = project.photos[project.activePhotoIndex];
+      curPhoto.pins = curPhoto.pins.filter(p => p.id !== pinId);
+      renderPinsOnActivePhoto();
+      saveAuto();
+    }
+
+    /* ========================================================
+       PASSPORT REPORT (Clean, focused on model & systems)
+       ======================================================== */
+    function openPassportModal() {
+      project.teamName = document.getElementById('team-name').value;
+      project.role = document.getElementById('team-role').value;
+
+      document.getElementById('pass-team').innerText = project.teamName || 'Полярные Медведи';
+      document.getElementById('pass-role').innerText = project.role;
+
+      const now = new Date();
+      document.getElementById('pass-date').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+      const shapeNames = {
+        single: '1 Блок',
+        inline2: '2 в ряд',
+        double: 'Сдвоенный',
+        lshape: 'Углом «Г»',
+        stacked2: '2 Этажа',
+        ushape: 'П-Форма'
+      };
+      document.getElementById('pass-shape-name').innerText = shapeNames[project.shape] || project.shape;
+
+      let totalPins = 0;
+      project.photos.forEach(ph => totalPins += ph.pins.length);
+      document.getElementById('pass-total-pins').innerText = `${totalPins} элементов`;
+
+      // Render Visual Twin Photo Cards with Legends
+      const galleryView = document.getElementById('pass-gallery-view');
+      galleryView.innerHTML = '';
+      project.photos.forEach(ph => {
+        const phCard = document.createElement('div');
+        phCard.className = 'passport-photo-card';
+        phCard.innerHTML = `
+          <div style="font-size: 10px; font-weight: 700; color: #38bdf8; margin-bottom: 4px; display:flex; justify-content:space-between;">
+            <span>${ph.title}</span>
+            <span style="color:#94a3b8;">${ph.pins.length} шт.</span>
+          </div>
+          <div class="passport-photo-img-box">
+            <img src="${ph.dataUrl}">
+            ${ph.pins.map((p, i) => {
+              const sys = SYSTEM_CONFIG[p.system] || SYSTEM_CONFIG.arch;
+              return `<div class="${sys.class}" style="position:absolute; left:${p.x}%; top:${p.y}%; width:18px; height:18px; border-radius:50%; border:1px solid white; color:white; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%);">${i+1}</div>`;
+            }).join('')}
+          </div>
+          <div style="margin-top:6px; max-height:80px; overflow-y:auto;">
+            ${ph.pins.length === 0 ? '<span style="color:#64748b; font-size:9px;">На этом фото нет отметок</span>' :
+              ph.pins.map((p, i) => {
+                const sys = SYSTEM_CONFIG[p.system] || SYSTEM_CONFIG.arch;
+                return `
+                  <div class="photo-pin-legend-row">
+                    <span class="${sys.class}" style="width:14px; height:14px; border-radius:50%; color:white; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:bold; flex-shrink:0;">${i+1}</span>
+                    <span style="font-weight:600; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
+                  </div>
+                `;
+              }).join('')}
+          </div>
+        `;
+        galleryView.appendChild(phCard);
+      });
+
+      // Grouped BIM Specification Table
+      const specContainer = document.getElementById('pass-spec-grouped');
+      specContainer.innerHTML = '';
+
+      const systems = ['arch', 'elec', 'heat', 'vent', 'water', 'sewer'];
+      let hasAny = false;
+
+      systems.forEach(sysKey => {
+        const sysConf = SYSTEM_CONFIG[sysKey];
+        const matching = [];
+
+        project.photos.forEach(ph => {
+          ph.pins.forEach(pin => {
+            if (pin.system === sysKey) {
+              matching.push({ ...pin, photoTitle: ph.title });
+            }
+          });
+        });
+
+        if (matching.length > 0) {
+          hasAny = true;
+          const block = document.createElement('div');
+          block.innerHTML = `
+            <div style="background:#172442; padding:6px 10px; border-radius:4px; font-weight:700; font-size:11px; margin-top:10px; margin-bottom:4px; display:flex; align-items:center; justify-content:space-between;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span class="${sysConf.class}" style="width:10px; height:10px; border-radius:3px; display:inline-block;"></span>
+                <span>${sysConf.name}</span>
+              </div>
+              <span style="color:#38bdf8; font-size:10px; font-weight:normal;">${matching.length} поз.</span>
+            </div>
+            <table class="spec-table">
+              <thead>
+                <tr>
+                  <th style="width:30px;">Поз.</th>
+                  <th style="width:170px;">Элемент макета</th>
+                  <th style="width:130px;">Расположение</th>
+                  <th>Параметры и единицы измерения</th>
+                  <th style="width:80px; text-align:center;">Статус</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${matching.map((m, idx) => `
+                  <tr>
+                    <td><b>${idx+1}</b></td>
+                    <td><b>${m.name}</b></td>
+                    <td style="color:#94a3b8; font-size:10px;">${m.photoTitle}</td>
+                    <td>
+                      ${m.params.length === 0 ? '<span style="color:#64748b;">—</span>' :
+                        m.params.map(p => `<span class="param-pill">${p.name}: <b>${p.value}${p.unit ? ' ' + p.unit : ''}</b></span>`).join('')}
+                    </td>
+                    <td style="text-align:center;">
+                      <span style="color:#34d399; font-size:10px; font-weight:bold;">● В макете</span>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          `;
+          specContainer.appendChild(block);
+        }
+      });
+
+      if (!hasAny) {
+        specContainer.innerHTML = '<div style="padding:14px; background:#151e36; border-radius:6px; color:#64748b; text-align:center;">На фотографиях пока не отмечено элементов. Кликайте по фото макета, чтобы привязать элементы и параметры!</div>';
+      }
+
+      document.getElementById('passport-modal').classList.add('show');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('show');
+    }
+
+    /* ========================================================
+       JSON EXPORT / IMPORT
+       ======================================================== */
+    function openIOModal() {
+      document.getElementById('io-area').value = JSON.stringify(project, null, 2);
+      document.getElementById('io-modal').classList.add('show');
+    }
+
+    function downloadJSON() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(project, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `BIM_Паспорт_${project.teamName || 'Команда'}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function loadJSON() {
+      try {
+        project = JSON.parse(document.getElementById('io-area').value);
+        document.getElementById('team-name').value = project.teamName || '';
+        document.getElementById('team-role').value = project.role || '🛏 Жилой модуль (Общежитие)';
+        setShape(project.shape || 'single');
+        updatePhotoUI();
+        saveAuto();
+        closeModal('io-modal');
+        alert('Проект успешно загружен!');
+      } catch (err) {
+        alert('Ошибка при чтении JSON!');
+      }
+    }
+
+    window.onload = function() {
+      loadSavedState();
+      init3D();
+      setShape(project.shape || 'single');
+      updatePhotoUI();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Revit backup and large binary models
+*.000*.rvt
+*.rvt
+*.rfa
+*.rte
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
