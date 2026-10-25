@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Инструкция по тестированию цифрового сервиса BIM Арктика</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 8mm 12mm 8mm 12mm;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: #1e293b;
+      line-height: 1.35;
+      font-size: 8.5pt;
+      margin: 0;
+      padding: 0;
+    }
+    .header-box {
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .title {
+      font-size: 14pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0;
+      line-height: 1.15;
+    }
+    .subtitle {
+      font-size: 8.5pt;
+      font-weight: 600;
+      color: #0284c7;
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 8pt;
+      border: 1px solid #bae6fd;
+      white-space: nowrap;
+    }
+    .intro-card {
+      background: #f8fafc;
+      border-left: 3px solid #38bdf8;
+      padding: 6px 10px;
+      border-radius: 0 4px 4px 0;
+      margin-bottom: 8px;
+      font-size: 8.5pt;
+      color: #334155;
+    }
+    h2 {
+      font-size: 10pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 8px;
+      margin-bottom: 5px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 2px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .step-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .step-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 6px 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .step-num {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      background: #0284c7;
+      color: white;
+      text-align: center;
+      line-height: 16px;
+      border-radius: 50%;
+      font-size: 7pt;
+      font-weight: bold;
+      margin-right: 4px;
+    }
+    .step-title {
+      font-weight: 700;
+      font-size: 9pt;
+      color: #0f172a;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+    }
+    .step-text {
+      font-size: 8pt;
+      color: #475569;
+    }
+    .step-text ul {
+      margin: 2px 0 0 12px;
+      padding: 0;
+    }
+    .step-text li {
+      margin-bottom: 2px;
+    }
+    .systems-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+      margin-top: 3px;
+      margin-bottom: 8px;
+    }
+    .systems-table th {
+      background: #f1f5f9;
+      color: #475569;
+      text-align: left;
+      padding: 4px 6px;
+      border: 1px solid #cbd5e1;
+      font-weight: 700;
+    }
+    .systems-table td {
+      padding: 3px 6px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    .tag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-weight: 700;
+      color: white;
+    }
+    .tag-arch { background: #0284c7; }
+    .tag-heat { background: #ea580c; }
+    .tag-vent { background: #059669; }
+    .tag-water { background: #0284c7; }
+    .tag-sew { background: #7c3aed; }
+    .tag-elec { background: #d97706; }
+    .questions-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 5px;
+      padding: 6px 10px;
+      margin-top: 6px;
+    }
+    .questions-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #166534;
+      margin-bottom: 2px;
+    }
+    .questions-box ol {
+      margin: 2px 0 0 14px;
+      padding: 0;
+      font-size: 8pt;
+      color: #14532d;
+    }
+    .questions-box li {
+      margin-bottom: 2px;
+    }
+    .footer {
+      margin-top: 8px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 4px;
+      font-size: 7pt;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 1px 3px;
+      border-radius: 3px;
+      font-size: 7.5pt;
+      color: #0369a1;
+      font-family: Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-box">
+    <div>
+      <div class="title">BIM-Паспорт экспедиционного модуля</div>
+      <div class="subtitle">Памятка эксперту • Инструкция по тестированию веб-сервиса</div>
+    </div>
+    <div style="text-align: right;">
+      <div class="badge">Экспертное ревью</div>
+      <div style="font-size: 7.5pt; color: #64748b; margin-top: 2px;">Хакатон «Арктика 2026»</div>
+    </div>
+  </div>
+
+  <div class="intro-card">
+    <b>Контекст проекта:</b> Сервис разработан для двухдневного хакатона/воркшопа школьников. Участники собирают в мастерской физический макет полярного модуля (картон, пеноплекс, фанера, подсветка) без доступа к профессиональным САПР (Revit). Приложение позволяет оцифровать макет: сфотографировать, привязать инженерные элементы и сформировать официальный цифровой паспорт со спецификацией оборудования для защиты перед жюри.
+  </div>
+
+  <h2>1. Основные сценарии для проверки (Чек-лист тестирования)</h2>
+
+  <div class="step-grid">
+    <div class="step-card">
+      <div class="step-title"><span class="step-num">1</span> 3D-конфигуратор (Слева)</div>
+      <div class="step-text">
+        <ul>
+          <li><b>Формы блоков:</b> выберите компоновку (1 Блок, 2 в ряд, Сдвоенный, Углом «Г», 2 Этажа, П-Форма).</li>
+          <li><b>Крыша (Вкл/Снята):</b> снимите кровлю, чтобы заглянуть внутрь модуля и оценить расположение дверей.</li>
+          <li><b>Фасад и метель:</b> проверьте выбор полярных цветов (оранжевый, синий, серый, белый).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-title"><span class="step-num">2</span> Фотофиксация макета</div>
+      <div class="step-text">
+        <ul>
+          <li><b>Главный фасад:</b> нажмите большую карточку загрузки и выберите любое фото макета (или тестовую картинку).</li>
+          <li><b>Дополнительные ракурсы:</b> через кнопку <code>+ Ракурс</code> добавьте интерьер или узел коммуникаций.</li>
+          <li>Клиентское сжатие автоматически оптимизирует фото без зависания браузера.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-title"><span class="step-num">3</span> Расстановка BIM-меток</div>
+      <div class="step-text">
+        <ul>
+          <li><b>Клик по фото:</b> ставит маркер инженерного элемента.</li>
+          <li><b>Параметры:</b> заполните название, тип (Число/Текст/Да-Нет), значение и единицу измерения.</li>
+          <li><b>Шаблоны:</b> используйте быстрые кнопки: <code>+ Длина</code>, <code>+ Количество</code>, <code>+ Мощность</code>.</li>
+          <li><b>Редактирование:</b> клик по маркеру или иконке ✏️ открывает окно правки.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-title"><span class="step-num">4</span> Паспорт макета и экспорт</div>
+      <div class="step-text">
+        <ul>
+          <li><b>Защита проекта:</b> нажмите кнопку «Защита: Паспорт макета» в верхней шапке.</li>
+          <li><b>Спецификация:</b> проверьте группировку оборудования по инженерным разделам (АР, ОВ, ВК, ЭОМ).</li>
+          <li><b>Печать в PDF:</b> кнопка печати формирует чистый документ без интерфейса приложения.</li>
+          <li><b>Сохранение:</b> проверьте экспорт проекта в файл <code>.json</code> (кнопка «Сохранить в файл»).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <h2>2. Классификация инженерных систем в приложении</h2>
+  <table class="systems-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Раздел проекта</th>
+        <th style="width: 35%;">Инженерные элементы</th>
+        <th style="width: 40%;">Рекомендуемые параметры в макете</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-arch">🏛️ Архитектура (АР)</span></td>
+        <td>Стены, окна, гермодвери, перегородки, тамбур</td>
+        <td>Длина (мм), Толщина утеплителя (мм), Материал</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-heat">🔥 Отопление (ОВ1)</span></td>
+        <td>Электроконвекторы, теплый пол, греющий кабель</td>
+        <td>Мощность (Вт), Количество (шт), Температура (°C)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-vent">💨 Вентиляция (ОВ2)</span></td>
+        <td>Приточно-вытяжная установка, рекуператор, диффузоры</td>
+        <td>Производительность (м³/ч), Диаметр (мм), Наличие фильтра</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-water">💧 Водоснабжение (ВК1)</span></td>
+        <td>Бак чистой воды, насосная станция, бойлер</td>
+        <td>Объем бака (л), Длина трассы (м), Диаметр труб</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-sew">🚽 Канализация (ВК2)</span></td>
+        <td>Септик замкнутого цикла, трапы, измельчитель</td>
+        <td>Суточный объем (л/сут), Диаметр отвода (мм)</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-elec">⚡ Электроснабжение (ЭОМ)</span></td>
+        <td>Светодиодное освещение, щит ввода, розетки</td>
+        <td>Напряжение (В), Суммарная мощность (Вт), Число точек (шт)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="questions-box">
+    <div class="questions-title">💬 На что обратить внимание при оценке (Вопросы для обратной связи):</div>
+    <ol>
+      <li>Насколько интерфейс интуитивен для школьников 7–11 классов без опыта работы в специализированных САПР?</li>
+      <li>Достаточно ли предложенного набора инженерных систем или стоит объединить/упростить дисциплины?</li>
+      <li>Удобно ли организован просмотр итогового паспорта и спецификации для членов жюри на защите?</li>
+      <li>Какие еще быстрые параметры (шаблоны) будут полезны при защите макета?</li>
+    </ol>
+  </div>
+
+  <div class="footer">
+    <div>Разработано для образовательного воркшопа по информационному моделированию (BIM) • 2026 г.</div>
+    <div>Автономное веб-приложение • Стек: HTML5, CSS3, JavaScript, Three.js</div>
+  </div>
+
+</body>
+</html>
