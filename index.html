@@ -713,14 +713,16 @@
         </div>
         <div>
           <label style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 3px;">Назначение модуля:</label>
-          <select class="form-select" id="team-role" onchange="saveAuto()">
-            <option value="🛏 Жилой модуль (Общежитие)">🛏 Жилой модуль (Общежитие)</option>
-            <option value="🍲 Столовая и кухня">🍲 Столовая и кухня</option>
-            <option value="🏢 Штаб и узел связи">🏢 Штаб и узел связи</option>
-            <option value="🔬 Научная лаборатория">🔬 Научная лаборатория</option>
-            <option value="🏥 Медпункт и лазарет">🏥 Медпункт и лазарет</option>
-            <option value="⚡ Энергоблок и генераторная">⚡ Энергоблок и генераторная</option>
+          <select class="form-select" id="team-role" onchange="handleRoleChange()">
+            <option value="жилой">жилой</option>
+            <option value="научно-лабораторный">научно-лабораторный</option>
+            <option value="общий">общий</option>
+            <option value="энергетический">энергетический</option>
+            <option value="технический">технический</option>
+            <option value="складской">складской</option>
+            <option value="custom">Свой вариант...</option>
           </select>
+          <input type="text" class="form-input" id="team-role-custom" placeholder="Введите свой вариант..." style="display: none; margin-top: 4px;" oninput="saveAuto()">
         </div>
       </div>
 
@@ -872,7 +874,7 @@
             </div>
             <div>
               <span style="color:#94a3b8; font-size:10px; display:block;">Функция модуля:</span>
-              <b style="font-size:13px; color:#38bdf8;" id="pass-role">Жилой модуль</b>
+              <b style="font-size:13px; color:#38bdf8;" id="pass-role">жилой</b>
             </div>
             <div>
               <span style="color:#94a3b8; font-size:10px; display:block;">Форма компоновки:</span>
@@ -955,7 +957,7 @@
 
     let project = {
       teamName: 'Полярные Медведи',
-      role: '🛏 Жилой модуль (Общежитие)',
+      role: 'жилой',
       shape: 'single', // single, inline2, double, lshape, stacked2, ushape
       panelColor: 0xea580c,
       activePhotoIndex: 0,
@@ -965,9 +967,55 @@
     let pendingPinCoords = null;
     let editingPinId = null; // null when adding new pin, ID when editing existing pin
 
+    function handleRoleChange() {
+      const select = document.getElementById('team-role');
+      const customInput = document.getElementById('team-role-custom');
+      if (select.value === 'custom') {
+        customInput.style.display = 'block';
+        customInput.focus();
+      } else {
+        customInput.style.display = 'none';
+      }
+      saveAuto();
+    }
+
+    function updateRoleUI() {
+      const select = document.getElementById('team-role');
+      const customInput = document.getElementById('team-role-custom');
+      if (!select || !customInput) return;
+
+      const standardOptions = ['жилой', 'научно-лабораторный', 'общий', 'энергетический', 'технический', 'складской'];
+      const current = project.role || 'жилой';
+
+      const matched = standardOptions.find(opt => 
+        opt.toLowerCase() === current.toLowerCase() || 
+        current.toLowerCase().includes(opt.toLowerCase())
+      );
+
+      if (matched) {
+        select.value = matched;
+        customInput.style.display = 'none';
+        customInput.value = '';
+      } else if (current && current !== 'custom') {
+        select.value = 'custom';
+        customInput.style.display = 'block';
+        customInput.value = current;
+      } else {
+        select.value = 'custom';
+        customInput.style.display = 'block';
+        customInput.value = '';
+      }
+    }
+
     function saveAuto() {
       project.teamName = document.getElementById('team-name').value;
-      project.role = document.getElementById('team-role').value;
+      const select = document.getElementById('team-role');
+      const customInput = document.getElementById('team-role-custom');
+      if (select && select.value === 'custom') {
+        project.role = (customInput && customInput.value.trim()) ? customInput.value.trim() : 'Свой вариант';
+      } else if (select) {
+        project.role = select.value;
+      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(project));
       } catch (e) {
@@ -981,10 +1029,12 @@
         try {
           project = JSON.parse(saved);
           document.getElementById('team-name').value = project.teamName || 'Полярные Медведи';
-          document.getElementById('team-role').value = project.role || '🛏 Жилой модуль (Общежитие)';
+          updateRoleUI();
         } catch (e) {
           console.error('Error loading state', e);
         }
+      } else {
+        updateRoleUI();
       }
     }
 
@@ -1587,11 +1637,10 @@
        PASSPORT REPORT (Clean, focused on model & systems)
        ======================================================== */
     function openPassportModal() {
-      project.teamName = document.getElementById('team-name').value;
-      project.role = document.getElementById('team-role').value;
+      saveAuto();
 
       document.getElementById('pass-team').innerText = project.teamName || 'Полярные Медведи';
-      document.getElementById('pass-role').innerText = project.role;
+      document.getElementById('pass-role').innerText = project.role || 'жилой';
 
       const now = new Date();
       document.getElementById('pass-date').innerText = now.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -1743,7 +1792,7 @@
         try {
           project = JSON.parse(evt.target.result);
           document.getElementById('team-name').value = project.teamName || '';
-          document.getElementById('team-role').value = project.role || '🛏 Жилой модуль (Общежитие)';
+          updateRoleUI();
           setShape(project.shape || 'single');
           updatePhotoUI();
           saveAuto();
@@ -1761,7 +1810,7 @@
       try {
         project = JSON.parse(document.getElementById('io-area').value);
         document.getElementById('team-name').value = project.teamName || '';
-        document.getElementById('team-role').value = project.role || '🛏 Жилой модуль (Общежитие)';
+        updateRoleUI();
         setShape(project.shape || 'single');
         updatePhotoUI();
         saveAuto();
