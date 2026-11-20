@@ -6,8 +6,8 @@
   <title>АРКТИКА-BIM | Цифровой двойник и паспорт макета</title>
   <!-- Local self-contained libraries (fast cold start, immune to CDN blocking) -->
   <link rel="stylesheet" href="vendor/fontawesome/all.min.css">
-  <script src="vendor/three.min.js" defer></script>
-  <script src="vendor/OrbitControls.js" defer></script>
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/OrbitControls.js"></script>
   <style>
     :root {
       --bg-dark: #0a0f1d;
@@ -1736,7 +1736,6 @@
       const specContainer = document.getElementById('pass-spec-grouped');
       specContainer.innerHTML = '';
 
-      const systems = ['arch', 'elec', 'heat', 'vent', 'water', 'sewer'];
       let hasAny = false;
 
       systems.forEach(sysKey => {
