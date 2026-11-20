@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>АРКТИКА-BIM | Цифровой двойник и паспорт макета</title>
-  <!-- Three.js & OrbitControls -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Local self-contained libraries (fast cold start, immune to CDN blocking) -->
+  <link rel="stylesheet" href="vendor/fontawesome/all.min.css">
+  <script src="vendor/three.min.js" defer></script>
+  <script src="vendor/OrbitControls.js" defer></script>
   <style>
     :root {
       --bg-dark: #0a0f1d;
@@ -392,6 +391,7 @@
       justify-content: center;
       font-size: 11px;
       font-weight: 800;
+      line-height: 1;
       color: white;
       cursor: pointer;
       box-shadow: 0 0 8px rgba(0,0,0,0.7);
@@ -546,15 +546,19 @@
     .passport-photo-img-box {
       position: relative;
       width: 100%;
-      height: 140px;
+      min-height: 140px;
       border-radius: 5px;
       overflow: hidden;
       background: #0d1424;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .passport-photo-img-box img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+      max-width: 100%;
+      max-height: 140px;
+      display: block;
+      border-radius: 4px;
     }
     .photo-pin-legend-row {
       font-size: 10px;
@@ -1055,9 +1059,9 @@
       camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
       camera.position.set(13, 9, 15);
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
       renderer.setSize(container.clientWidth, container.clientHeight);
-      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
       renderer.shadowMap.enabled = true;
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);
@@ -1572,6 +1576,20 @@
       saveAuto();
     }
 
+    function getPinSystemIndex(targetPin) {
+      if (!targetPin) return 1;
+      let counter = 0;
+      for (const ph of project.photos) {
+        for (const p of ph.pins) {
+          if (p.system === targetPin.system) {
+            counter++;
+            if (p.id === targetPin.id) return counter;
+          }
+        }
+      }
+      return counter || 1;
+    }
+
     function renderPinsOnActivePhoto() {
       const container = document.getElementById('photo-container');
       container.querySelectorAll('.hotspot-pin').forEach(p => p.remove());
@@ -1581,12 +1599,13 @@
 
       curPhoto.pins.forEach((pin, idx) => {
         const sysConf = SYSTEM_CONFIG[pin.system] || SYSTEM_CONFIG.arch;
+        const posNum = getPinSystemIndex(pin);
         const pEl = document.createElement('div');
         pEl.className = `hotspot-pin ${sysConf.class}`;
         pEl.style.left = `${pin.x}%`;
         pEl.style.top = `${pin.y}%`;
-        pEl.innerText = idx + 1;
-        pEl.title = `${pin.name} (Кликните для редактирования)`;
+        pEl.innerText = posNum;
+        pEl.title = `[Поз. ${posNum}] ${pin.name} (Кликните для редактирования)`;
         pEl.onclick = (ev) => {
           ev.stopPropagation();
           openEditPin(pin.id);
@@ -1598,12 +1617,13 @@
       listEl.innerHTML = '';
       curPhoto.pins.forEach((pin, idx) => {
         const sysConf = SYSTEM_CONFIG[pin.system] || SYSTEM_CONFIG.arch;
+        const posNum = getPinSystemIndex(pin);
         const card = document.createElement('div');
         card.className = 'object-card';
         card.innerHTML = `
           <div class="object-card-header">
             <div style="font-weight: 700; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer;" onclick="openEditPin(${pin.id})">
-              <span class="${sysConf.class}" style="color:white; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px;">${idx+1}</span>
+              <span class="${sysConf.class}" style="color:white; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; line-height:1;">${posNum}</span>
               ${pin.name}
             </div>
             <div style="display: flex; align-items: center; gap: 4px;">
@@ -1659,6 +1679,21 @@
       project.photos.forEach(ph => totalPins += ph.pins.length);
       document.getElementById('pass-total-pins').innerText = `${totalPins} элементов`;
 
+      // Map each pin to its exact position number in its engineering system specification
+      const systems = ['arch', 'elec', 'heat', 'vent', 'water', 'sewer'];
+      const pinPosMap = new Map();
+      systems.forEach(sysKey => {
+        let counter = 0;
+        project.photos.forEach(ph => {
+          ph.pins.forEach(pin => {
+            if (pin.system === sysKey) {
+              counter++;
+              pinPosMap.set(pin.id, counter);
+            }
+          });
+        });
+      });
+
       // Render Visual Twin Photo Cards with Legends
       const galleryView = document.getElementById('pass-gallery-view');
       galleryView.innerHTML = '';
@@ -1671,19 +1706,23 @@
             <span style="color:#94a3b8;">${ph.pins.length} шт.</span>
           </div>
           <div class="passport-photo-img-box">
-            <img src="${ph.dataUrl}">
-            ${ph.pins.map((p, i) => {
-              const sys = SYSTEM_CONFIG[p.system] || SYSTEM_CONFIG.arch;
-              return `<div class="${sys.class}" style="position:absolute; left:${p.x}%; top:${p.y}%; width:18px; height:18px; border-radius:50%; border:1px solid white; color:white; font-size:9px; font-weight:bold; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%);">${i+1}</div>`;
-            }).join('')}
+            <div style="position:relative; display:inline-block; max-width:100%;">
+              <img src="${ph.dataUrl}">
+              ${ph.pins.map((p, i) => {
+                const sys = SYSTEM_CONFIG[p.system] || SYSTEM_CONFIG.arch;
+                const posNum = pinPosMap.get(p.id) || (i + 1);
+                return `<div class="${sys.class}" style="position:absolute; left:${p.x}%; top:${p.y}%; width:18px; height:18px; border-radius:50%; border:1.5px solid white; color:white; font-size:10px; font-weight:800; line-height:1; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); box-shadow:0 0 6px rgba(0,0,0,0.6);" title="[Поз. ${posNum}] ${p.name}">${posNum}</div>`;
+              }).join('')}
+            </div>
           </div>
           <div style="margin-top:6px; max-height:80px; overflow-y:auto;">
             ${ph.pins.length === 0 ? '<span style="color:#64748b; font-size:9px;">На этом фото нет отметок</span>' :
               ph.pins.map((p, i) => {
                 const sys = SYSTEM_CONFIG[p.system] || SYSTEM_CONFIG.arch;
+                const posNum = pinPosMap.get(p.id) || (i + 1);
                 return `
                   <div class="photo-pin-legend-row">
-                    <span class="${sys.class}" style="width:14px; height:14px; border-radius:50%; color:white; display:inline-flex; align-items:center; justify-content:center; font-size:8px; font-weight:bold; flex-shrink:0;">${i+1}</span>
+                    <span class="${sys.class}" style="width:15px; height:15px; border-radius:50%; color:white; display:inline-flex; align-items:center; justify-content:center; font-size:9px; font-weight:800; line-height:1; flex-shrink:0;">${posNum}</span>
                     <span style="font-weight:600; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.name}</span>
                   </div>
                 `;
@@ -1726,7 +1765,7 @@
             <table class="spec-table">
               <thead>
                 <tr>
-                  <th style="width:30px;">Поз.</th>
+                  <th style="width:45px; text-align:center;">Поз.</th>
                   <th style="width:170px;">Элемент макета</th>
                   <th style="width:130px;">Расположение</th>
                   <th>Параметры и единицы измерения</th>
@@ -1736,7 +1775,7 @@
               <tbody>
                 ${matching.map((m, idx) => `
                   <tr>
-                    <td><b>${idx+1}</b></td>
+                    <td style="text-align:center;"><b>${idx+1}</b></td>
                     <td><b>${m.name}</b></td>
                     <td style="color:#94a3b8; font-size:10px;">${m.photoTitle}</td>
                     <td>
@@ -1821,12 +1860,18 @@
       }
     }
 
-    window.onload = function() {
+    function startApp() {
       loadSavedState();
       init3D();
       setShape(project.shape || 'single');
       updatePhotoUI();
-    };
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startApp);
+    } else {
+      startApp();
+    }
   </script>
 </body>
 </html>
